@@ -125,33 +125,66 @@ class AIVoiceDetector:
         if not human_features or not ai_features:
             raise ValueError("No valid features extracted from training data")
         
+        # Check data balance
+        ratio = len(human_features) / len(ai_features)
+        print(f"Data balance - Human: {len(human_features)}, AI: {len(ai_features)} (ratio: {ratio:.2f}:1)")
+        
+        if ratio > 3 or ratio < 0.33:
+            print("⚠️  Warning: Imbalanced dataset detected. This may cause prediction bias.")
+        
         # Prepare training data
         X = np.vstack([human_features, ai_features])
         y = np.hstack([np.zeros(len(human_features)), np.ones(len(ai_features))])  # 0=human, 1=AI
         
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        # Analyze feature differences
+        human_mean = np.mean(human_features, axis=0)
+        ai_mean = np.mean(ai_features, axis=0)
+        feature_diff = np.mean(np.abs(human_mean - ai_mean))
+        print(f"Average feature difference: {feature_diff:.6f}")
+        
+        if feature_diff < 0.01:
+            print("⚠️  Warning: Features are very similar. Consider collecting more diverse samples.")
+        
+        # Split data with stratification to maintain class balance
+        test_size = max(0.1, min(0.3, 2.0 / len(X)))  # Adaptive test size
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42, stratify=y
+        )
         
         # Scale features
         X_train_scaled = self.scaler.fit_transform(X_train)
         X_test_scaled = self.scaler.transform(X_test)
         
-        # Train Random Forest classifier
+        # Train Random Forest classifier with better parameters for small datasets
         self.model = RandomForestClassifier(
-            n_estimators=100,
-            max_depth=10,
+            n_estimators=min(100, max(10, len(X_train) * 2)),  # Adaptive n_estimators
+            max_depth=min(10, max(3, int(np.log2(len(X_train))))),  # Adaptive depth
+            min_samples_split=max(2, len(X_train) // 10),  # Prevent overfitting
+            min_samples_leaf=max(1, len(X_train) // 20),   # Prevent overfitting
             random_state=42,
-            class_weight='balanced'
+            class_weight='balanced'  # Handle class imbalance
         )
         
         self.model.fit(X_train_scaled, y_train)
         
         # Evaluate model
         train_accuracy = self.model.score(X_train_scaled, y_train)
-        test_accuracy = self.model.score(X_test_scaled, y_test)
+        test_accuracy = self.model.score(X_test_scaled, y_test) if len(X_test) > 0 else train_accuracy
         
         print(f"Training accuracy: {train_accuracy:.3f}")
         print(f"Test accuracy: {test_accuracy:.3f}")
+        
+        # Detailed evaluation on training data
+        train_predictions = self.model.predict(X_train_scaled)
+        human_train_accuracy = np.mean(train_predictions[y_train == 0] == 0) if np.any(y_train == 0) else 0
+        ai_train_accuracy = np.mean(train_predictions[y_train == 1] == 1) if np.any(y_train == 1) else 0
+        
+        print(f"Human class accuracy: {human_train_accuracy:.3f}")
+        print(f"AI class accuracy: {ai_train_accuracy:.3f}")
+        
+        if human_train_accuracy > 0.9 and ai_train_accuracy < 0.5:
+            print("⚠️  Model appears biased toward Human class!")
+            print("   Consider collecting more diverse AI samples or different TTS systems.")
         
         self.is_trained = True
         
