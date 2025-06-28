@@ -9,14 +9,24 @@ A web interface for collecting voice samples to train the AI voice detection mod
 - 👤 **Voice Type Selection**: Contributors can specify Human or AI voice
 - 📊 **Real-time Stats**: Track collection progress
 - 💾 **Automatic Storage**: Organized file storage with metadata
+- 🔄 **Auto-conversion**: WebM recordings automatically converted to WAV format
 - 🌐 **Easy Sharing**: Simple web interface for friends to contribute
 
 ## Setup
 
 ### Prerequisites
 
+**System Requirements:**
+- FFmpeg (for audio conversion)
+
 ```bash
-# Install dependencies
+# Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# macOS
+brew install ffmpeg
+
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
@@ -78,7 +88,8 @@ UI/
 ### Recording Process
 - Browser-based recording using WebRTC
 - Automatic 15-second duration
-- WebM format for cross-browser compatibility
+- Initial WebM format for cross-browser compatibility
+- Automatic conversion to WAV format (22kHz, mono, 16-bit)
 - Real-time preview before upload
 
 ### Data Storage

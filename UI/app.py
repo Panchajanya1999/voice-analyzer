@@ -13,6 +13,8 @@ from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import openai
 from werkzeug.utils import secure_filename
+from pydub import AudioSegment
+import tempfile
 
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -62,7 +64,7 @@ def generate_sentence():
         if OPENAI_API_KEY:
             # Use OpenAI to generate a sentence
             response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+                model="gpt-4o-mini",
                 messages=[
                     {
                         "role": "system",
@@ -121,7 +123,7 @@ def generate_sentence():
 
 @app.route('/upload_recording', methods=['POST'])
 def upload_recording():
-    """Handle audio file upload"""
+    """Handle audio file upload and convert to WAV"""
     try:
         if 'audio' not in request.files:
             return jsonify({'success': False, 'error': 'No audio file provided'}), 400
@@ -133,33 +135,62 @@ def upload_recording():
         if voice_type not in ['human', 'ai']:
             return jsonify({'success': False, 'error': 'Invalid voice type'}), 400
         
-        # Generate unique filename
+        # Generate unique filename for WAV
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         unique_id = str(uuid.uuid4())[:8]
-        filename = f"{voice_type}_{timestamp}_{unique_id}.webm"
+        wav_filename = f"{voice_type}_{timestamp}_{unique_id}.wav"
         
-        # Save the file
-        folder = os.path.join(app.config['UPLOAD_FOLDER'], voice_type)
-        filepath = os.path.join(folder, filename)
-        audio_file.save(filepath)
+        # Create temporary file for WebM
+        with tempfile.NamedTemporaryFile(suffix='.webm', delete=False) as temp_webm:
+            audio_file.save(temp_webm.name)
+            temp_webm_path = temp_webm.name
+        
+        try:
+            # Convert WebM to WAV using pydub
+            print(f"Converting {temp_webm_path} to WAV...")
+            audio = AudioSegment.from_file(temp_webm_path, format="webm")
+            
+            # Ensure consistent audio format
+            audio = audio.set_frame_rate(22050)  # Match the sample rate used in voice_classifier
+            audio = audio.set_channels(1)  # Mono
+            audio = audio.set_sample_width(2)  # 16-bit
+            
+            # Save as WAV
+            folder = os.path.join(app.config['UPLOAD_FOLDER'], voice_type)
+            wav_filepath = os.path.join(folder, wav_filename)
+            audio.export(wav_filepath, format="wav")
+            
+            print(f"Successfully converted to WAV: {wav_filename}")
+            
+        except Exception as e:
+            print(f"Error converting audio: {e}")
+            return jsonify({'success': False, 'error': f'Audio conversion failed: {str(e)}'}), 500
+        
+        finally:
+            # Clean up temporary WebM file
+            if os.path.exists(temp_webm_path):
+                os.unlink(temp_webm_path)
         
         # Save metadata
         metadata = {
-            'filename': filename,
+            'filename': wav_filename,
             'voice_type': voice_type,
             'sentence': sentence,
             'timestamp': timestamp,
-            'file_size': os.path.getsize(filepath)
+            'format': 'wav',
+            'sample_rate': 22050,
+            'channels': 1,
+            'file_size': os.path.getsize(wav_filepath)
         }
         
-        metadata_file = os.path.join(folder, f"{filename}.json")
+        metadata_file = os.path.join(folder, f"{wav_filename}.json")
         with open(metadata_file, 'w') as f:
             json.dump(metadata, f, indent=2)
         
         return jsonify({
             'success': True,
-            'message': f'Recording saved successfully as {voice_type} voice sample',
-            'filename': filename
+            'message': f'Recording saved successfully as {voice_type} voice sample (converted to WAV)',
+            'filename': wav_filename
         })
     
     except Exception as e:
@@ -170,8 +201,12 @@ def upload_recording():
 def get_stats():
     """Get statistics about collected recordings"""
     try:
-        human_count = len(os.listdir(os.path.join(app.config['UPLOAD_FOLDER'], 'human'))) // 2  # Divide by 2 because of .json files
-        ai_count = len(os.listdir(os.path.join(app.config['UPLOAD_FOLDER'], 'ai'))) // 2
+        # Count .wav files only
+        human_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'human')
+        ai_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'ai')
+        
+        human_count = len([f for f in os.listdir(human_dir) if f.endswith('.wav')]) if os.path.exists(human_dir) else 0
+        ai_count = len([f for f in os.listdir(ai_dir) if f.endswith('.wav')]) if os.path.exists(ai_dir) else 0
         
         return jsonify({
             'success': True,
