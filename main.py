@@ -9,6 +9,7 @@ import soundfile as sf
 import numpy as np
 import time
 import threading
+import os
 from src.voice_classifier import AIVoiceDetector, detect_voice_realtime
 
 class RealTimeVoiceDetector:
@@ -87,36 +88,54 @@ class RealTimeVoiceDetector:
 
 # Quick setup for training with example data
 def quick_train_example():
-    """Example training function - replace with your actual data"""
+    """Training function that automatically finds WAV files from UI recordings"""
     detector = AIVoiceDetector()
     
-    print("For training, you need:")
-    print("1. Multiple human voice samples (5-10 seconds each)")
-    print("2. Multiple AI voice samples (5-10 seconds each)")
-    print("3. Save them as .wav files")
+    print("🔍 Scanning for voice recordings...")
     
-    # Example file lists (replace with your actual files)
-    human_files = [
-        # Add paths to your human voice recordings
-        # "recordings/human_1.wav",
-        # "recordings/human_2.wav",
-        # etc.
-    ]
+    # Look for WAV files in UI recordings folders
+    ui_recordings_path = os.path.join(os.path.dirname(__file__), "UI", "recordings")
+    human_dir = os.path.join(ui_recordings_path, "human")
+    ai_dir = os.path.join(ui_recordings_path, "ai")
     
-    ai_files = [
-        # Add paths to your AI voice recordings
-        # "recordings/ai_1.wav", 
-        # "recordings/ai_2.wav",
-        # etc.
-    ]
+    # Find all WAV files
+    human_files = []
+    ai_files = []
+    
+    if os.path.exists(human_dir):
+        human_files = [os.path.join(human_dir, f) for f in os.listdir(human_dir) if f.endswith('.wav')]
+        print(f"📁 Found {len(human_files)} human voice samples in {human_dir}")
+    else:
+        print(f"❌ Human recordings directory not found: {human_dir}")
+    
+    if os.path.exists(ai_dir):
+        ai_files = [os.path.join(ai_dir, f) for f in os.listdir(ai_dir) if f.endswith('.wav')]
+        print(f"📁 Found {len(ai_files)} AI voice samples in {ai_dir}")
+    else:
+        print(f"❌ AI recordings directory not found: {ai_dir}")
+    
+    # Check if we have enough samples
+    if len(human_files) < 3:
+        print("⚠️  Warning: Less than 3 human voice samples found. Model may not train well.")
+    if len(ai_files) < 3:
+        print("⚠️  Warning: Less than 3 AI voice samples found. Model may not train well.")
     
     if human_files and ai_files:
-        print("Training model...")
-        detector.train_model(human_files, ai_files)
-        detector.save_model("voice_detector_model.pkl")
-        print("Model trained and saved!")
+        print(f"\n🏋️  Training model with {len(human_files)} human and {len(ai_files)} AI samples...")
+        try:
+            detector.train_model(human_files, ai_files)
+            detector.save_model("voice_detector_model.pkl")
+            print("✅ Model trained and saved as 'voice_detector_model.pkl'!")
+        except Exception as e:
+            print(f"❌ Training failed: {e}")
     else:
-        print("Please add your training files to the lists above")
+        print("\n❌ No voice samples found!")
+        print("💡 To collect samples:")
+        print("   1. Go to the UI folder: cd UI")
+        print("   2. Start the web server: python app.py") 
+        print("   3. Visit http://localhost:6969")
+        print("   4. Record some voice samples")
+        print("   5. Come back and run training again")
 
 # Command line interface
 def main():
