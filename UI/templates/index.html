@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Data Collection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎙️ Voice Data Collection</h1>
+            <p class="subtitle">Help train our AI voice detector by recording your voice!</p>
+        </header>
+
+        <div class="stats-container">
+            <div class="stat-box">
+                <h3>Human Voices</h3>
+                <p class="stat-number" id="human-count">0</p>
+            </div>
+            <div class="stat-box">
+                <h3>AI Voices</h3>
+                <p class="stat-number" id="ai-count">0</p>
+            </div>
+            <div class="stat-box">
+                <h3>Total Samples</h3>
+                <p class="stat-number" id="total-count">0</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- Voice Type Selection -->
+            <div class="voice-type-section">
+                <h2>1. Select Voice Type</h2>
+                <p class="info">Are you going to record a human voice or play an AI-generated voice?</p>
+                <div class="voice-type-buttons">
+                    <button class="voice-type-btn active" data-type="human">
+                        <span class="emoji">👤</span>
+                        <span>Human Voice</span>
+                    </button>
+                    <button class="voice-type-btn" data-type="ai">
+                        <span class="emoji">🤖</span>
+                        <span>AI Voice</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sentence Display -->
+            <div class="sentence-section">
+                <h2>2. Read This Sentence</h2>
+                <div class="sentence-box">
+                    <p id="sentence-text">Click "Generate New Sentence" to get started!</p>
+                </div>
+                <button id="generate-btn" class="btn btn-secondary">Generate New Sentence</button>
+            </div>
+
+            <!-- Recording Section -->
+            <div class="recording-section">
+                <h2>3. Record Your Voice</h2>
+                <p class="info">Click record and read the sentence above. Recording will automatically stop after 15 seconds.</p>
+                
+                <div class="recording-controls">
+                    <button id="record-btn" class="btn btn-primary" disabled>
+                        <span class="btn-icon">🎤</span>
+                        <span class="btn-text">Start Recording</span>
+                    </button>
+                    
+                    <div class="timer" id="timer" style="display: none;">
+                        <span id="timer-text">0:00</span>
+                    </div>
+                </div>
+
+                <div class="audio-preview" id="audio-preview" style="display: none;">
+                    <h3>Preview Your Recording</h3>
+                    <audio id="audio-player" controls></audio>
+                    <div class="preview-actions">
+                        <button id="upload-btn" class="btn btn-success">
+                            <span class="btn-icon">📤</span>
+                            <span class="btn-text">Upload Recording</span>
+                        </button>
+                        <button id="retry-btn" class="btn btn-secondary">
+                            <span class="btn-icon">🔄</span>
+                            <span class="btn-text">Try Again</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="status-message" id="status-message"></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Your recordings help improve AI voice detection technology. Thank you for contributing!</p>
+            <p class="privacy-note">🔒 All recordings are stored securely and used only for research purposes.</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/recorder.js') }}"></script>
+</body>
+</html>
