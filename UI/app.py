@@ -66,19 +66,40 @@ def generate_sentence():
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a helpful assistant that generates simple, natural sentences for voice recording. The sentences should be 10-20 words long, use common vocabulary, and be easy to read aloud."
+                        "content": "Generate only a single natural sentence for voice recording. Return just the sentence without any introduction, explanation, or quotes. The sentence should be 10-20 words long and easy to read aloud."
                     },
                     {
                         "role": "user",
-                        "content": "Generate a single sentence that someone can read aloud for voice recording. Make it natural and conversational."
+                        "content": "Generate one sentence."
                     }
                 ],
                 max_tokens=50,
                 temperature=0.9
             )
             sentence = response.choices[0].message.content.strip()
-            # Remove quotes if present
-            sentence = sentence.strip('"\'')
+            
+            # Clean up the response - extract just the sentence
+            # Remove common prefixes and quotes
+            prefixes_to_remove = [
+                "Sure! Here is a sentence for voice recording:",
+                "Here is a sentence for voice recording:",
+                "Here's a sentence for you:",
+                "Here is a sentence:",
+                "Sure! Here's a sentence:",
+                "Here's a sentence for voice recording:",
+            ]
+            
+            for prefix in prefixes_to_remove:
+                if sentence.startswith(prefix):
+                    sentence = sentence[len(prefix):].strip()
+                    break
+            
+            # Remove quotes and extra whitespace
+            sentence = sentence.strip('"\'').strip()
+            
+            # If there are multiple sentences, take the first one
+            if '.' in sentence and not sentence.endswith('.'):
+                sentence = sentence.split('.')[0] + '.'
         else:
             # Use fallback sentence
             import random
