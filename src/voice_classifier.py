@@ -1,7 +1,9 @@
-# voice_classifier.py
 """
-AI Voice Detection Core Module
-Provides the main AIVoiceDetector class for training and classifying audio samples
+AI Voice Detection Core Module.
+
+Provides the main AIVoiceDetector class for training and classifying audio samples.
+Uses machine learning techniques with audio feature extraction to distinguish between
+human and AI-generated voices.
 """
 
 import numpy as np
@@ -17,13 +19,42 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class AIVoiceDetector:
+    """
+    AI voice detection classifier using audio feature analysis.
+
+    This class extracts comprehensive audio features from voice samples and uses
+    a Random Forest classifier to distinguish between human and AI-generated voices.
+
+    Attributes:
+        model (RandomForestClassifier or None): The trained classification model.
+        scaler (StandardScaler): Feature scaler for normalizing input data.
+        is_trained (bool): Flag indicating whether the model has been trained.
+    """
+
     def __init__(self):
+        """Initialize the AI voice detector with default settings."""
         self.model = None
         self.scaler = StandardScaler()
         self.is_trained = False
         
     def extract_features(self, audio_file_path):
-        """Extract comprehensive audio features for classification"""
+        """
+        Extract comprehensive audio features from an audio file.
+
+        Extracts a wide range of features including spectral features (centroids,
+        rolloff, bandwidth), MFCCs, chroma features, temporal features (RMS energy),
+        pitch characteristics, spectral contrast, tonnetz, and custom AI detection
+        features (periodicity, harmonic-to-noise ratio, spectral flux).
+
+        Args:
+            audio_file_path (str): Path to the audio file to analyze.
+
+        Returns:
+            numpy.ndarray or None: Array of extracted features, or None if extraction fails.
+
+        Note:
+            The audio is loaded at 22050 Hz sample rate with a maximum duration of 5 seconds.
+        """
         try:
             # Load audio
             y, sr = librosa.load(audio_file_path, sr=22050, duration=5.0)
@@ -105,7 +136,24 @@ class AIVoiceDetector:
             return None
     
     def train_model(self, human_audio_files, ai_audio_files):
-        """Train the AI voice detection model"""
+        """
+        Train the AI voice detection model on labeled audio samples.
+
+        Extracts features from both human and AI voice samples, checks data balance,
+        trains a Random Forest classifier, and evaluates performance. Provides
+        warnings for imbalanced datasets or insufficient feature differences.
+
+        Args:
+            human_audio_files (list of str): List of file paths to human voice samples.
+            ai_audio_files (list of str): List of file paths to AI-generated voice samples.
+
+        Raises:
+            ValueError: If no valid features can be extracted from the training data.
+
+        Note:
+            The model uses adaptive parameters based on dataset size to prevent overfitting
+            on small datasets. Class weights are balanced automatically.
+        """
         print("Extracting features from training data...")
         
         # Extract features from human voices
@@ -189,7 +237,23 @@ class AIVoiceDetector:
         self.is_trained = True
         
     def predict(self, audio_file_path):
-        """Predict if the voice is human or AI generated"""
+        """
+        Predict whether a voice sample is human or AI-generated.
+
+        Extracts features from the audio file, scales them, and uses the trained
+        model to make a prediction with confidence score.
+
+        Args:
+            audio_file_path (str): Path to the audio file to classify.
+
+        Returns:
+            tuple: A tuple containing:
+                - result (str or None): "Human" or "AI" if prediction succeeds, None on error.
+                - confidence (float): Confidence score between 0.0 and 1.0.
+
+        Raises:
+            ValueError: If the model has not been trained yet.
+        """
         if not self.is_trained:
             raise ValueError("Model not trained yet. Please train the model first.")
         
@@ -208,7 +272,17 @@ class AIVoiceDetector:
         return "AI" if prediction == 1 else "Human", confidence
     
     def save_model(self, model_path):
-        """Save the trained model"""
+        """
+        Save the trained model to disk.
+
+        Serializes the model, scaler, and training status to a pickle file.
+
+        Args:
+            model_path (str): Path where the model should be saved.
+
+        Raises:
+            ValueError: If no trained model exists to save.
+        """
         if not self.is_trained:
             raise ValueError("No trained model to save")
         
@@ -224,7 +298,18 @@ class AIVoiceDetector:
         print(f"Model saved to {model_path}")
     
     def load_model(self, model_path):
-        """Load a pre-trained model"""
+        """
+        Load a pre-trained model from disk.
+
+        Deserializes the model, scaler, and training status from a pickle file.
+
+        Args:
+            model_path (str): Path to the saved model file.
+
+        Raises:
+            FileNotFoundError: If the model file does not exist.
+            Exception: If the file cannot be loaded or is corrupted.
+        """
         with open(model_path, 'rb') as f:
             model_data = pickle.load(f)
         
@@ -234,9 +319,22 @@ class AIVoiceDetector:
         
         print(f"Model loaded from {model_path}")
 
-# Real-time detection function
 def detect_voice_realtime(detector, audio_file_path):
-    """Simple function to detect voice type from audio file"""
+    """
+    Detect and display voice type from an audio file.
+
+    Wrapper function that performs prediction and prints the results
+    in a user-friendly format.
+
+    Args:
+        detector (AIVoiceDetector): The detector instance to use for prediction.
+        audio_file_path (str): Path to the audio file to analyze.
+
+    Returns:
+        tuple: A tuple containing:
+            - result (str or None): "Human" or "AI" if detection succeeds, None on error.
+            - confidence (float): Confidence score between 0.0 and 1.0.
+    """
     try:
         result, confidence = detector.predict(audio_file_path)
         if result:
