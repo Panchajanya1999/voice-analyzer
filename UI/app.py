@@ -1,6 +1,9 @@
 """
-Voice Data Collection Web UI
-Flask application for collecting voice samples with OpenAI-generated sentences
+Voice Data Collection Web UI.
+
+Flask application for collecting and managing voice samples. Provides a web
+interface for recording human and AI-generated voices, generates unique sentences
+using OpenAI's API, and handles audio file conversion from WebM to WAV format.
 """
 
 import os
@@ -54,12 +57,28 @@ FALLBACK_SENTENCES = [
 
 @app.route('/')
 def index():
-    """Render the main page"""
+    """
+    Render the main page.
+
+    Returns:
+        str: Rendered HTML template for the voice data collection interface.
+    """
     return render_template('index.html')
 
 @app.route('/generate_sentence', methods=['GET'])
 def generate_sentence():
-    """Generate a sentence using OpenAI or return a fallback sentence"""
+    """
+    Generate a sentence for voice recording.
+
+    Uses OpenAI's API to generate a unique, natural sentence suitable for
+    voice recording. Falls back to pre-defined sentences if the API is
+    unavailable or if no API key is configured.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - success (bool): Whether sentence generation succeeded.
+            - sentence (str): The generated or fallback sentence.
+    """
     try:
         if OPENAI_API_KEY:
             # Use OpenAI to generate a sentence
@@ -123,7 +142,25 @@ def generate_sentence():
 
 @app.route('/upload_recording', methods=['POST'])
 def upload_recording():
-    """Handle audio file upload and convert to WAV"""
+    """
+    Handle audio file upload and convert to WAV format.
+
+    Receives WebM audio files from the browser, converts them to WAV format
+    with standardized settings (22050 Hz, mono, 16-bit), and saves them to
+    the appropriate directory (human or ai) with associated metadata.
+
+    Form Parameters:
+        audio (file): The audio file in WebM format.
+        voice_type (str): Type of voice - either 'human' or 'ai'.
+        sentence (str): The sentence that was recorded.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - success (bool): Whether upload and conversion succeeded.
+            - message (str): Success or error message.
+            - filename (str): Name of the saved WAV file (on success).
+            - error (str): Error description (on failure).
+    """
     try:
         if 'audio' not in request.files:
             return jsonify({'success': False, 'error': 'No audio file provided'}), 400
@@ -199,7 +236,19 @@ def upload_recording():
 
 @app.route('/stats', methods=['GET'])
 def get_stats():
-    """Get statistics about collected recordings"""
+    """
+    Get statistics about collected voice recordings.
+
+    Counts the number of WAV files in both the human and AI recording directories.
+
+    Returns:
+        flask.Response: JSON response containing:
+            - success (bool): Whether statistics were retrieved successfully.
+            - human_recordings (int): Number of human voice samples.
+            - ai_recordings (int): Number of AI voice samples.
+            - total_recordings (int): Total number of all samples.
+            - error (str): Error description (on failure).
+    """
     try:
         # Count .wav files only
         human_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'human')

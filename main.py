@@ -1,7 +1,9 @@
-# main.py
 """
-Real-time Voice Detection System
-Main application for recording and analyzing voice samples to detect AI-generated speech
+Real-time Voice Detection System.
+
+Main application for recording and analyzing voice samples to detect AI-generated speech.
+This module provides a command-line interface for recording audio, training models,
+and detecting whether voice samples are human or AI-generated.
 """
 
 import sounddevice as sd
@@ -13,21 +15,53 @@ import os
 from src.voice_classifier import AIVoiceDetector, detect_voice_realtime
 
 class RealTimeVoiceDetector:
+    """
+    Real-time voice detection system for identifying AI-generated speech.
+
+    This class provides methods for recording audio, detecting voice types,
+    and continuous monitoring of voice samples.
+
+    Attributes:
+        detector (AIVoiceDetector): The underlying AI voice detection model.
+        is_recording (bool): Flag indicating if currently recording.
+        sample_rate (int): Audio sample rate in Hz (default: 22050).
+        duration (int): Recording duration in seconds (default: 5).
+    """
+
     def __init__(self, model_path=None):
+        """
+        Initialize the real-time voice detector.
+
+        Args:
+            model_path (str, optional): Path to a pre-trained model file.
+                If provided, attempts to load the model. Defaults to None.
+        """
         self.detector = AIVoiceDetector()
         self.is_recording = False
         self.sample_rate = 22050
         self.duration = 5  # 5 seconds
-        
+
         if model_path:
             try:
                 self.detector.load_model(model_path)
                 print("Pre-trained model loaded successfully!")
-            except:
-                print("Could not load pre-trained model. Please train first.")
+            except Exception as e:
+                print(f"Could not load pre-trained model: {e}. Please train first.")
     
     def record_audio(self, filename="temp_recording.wav"):
-        """Record 5 seconds of audio"""
+        """
+        Record audio from the default microphone.
+
+        Records audio for the specified duration (default 5 seconds) and saves
+        it to a WAV file. Displays a countdown during recording.
+
+        Args:
+            filename (str, optional): Output filename for the recording.
+                Defaults to "temp_recording.wav".
+
+        Returns:
+            str: The filename where the audio was saved.
+        """
         print(f"Recording for {self.duration} seconds... Speak now!")
         
         # Record audio
@@ -52,7 +86,20 @@ class RealTimeVoiceDetector:
         return filename
     
     def detect_voice_type(self, audio_file=None):
-        """Detect if voice is human or AI"""
+        """
+        Detect whether a voice sample is human or AI-generated.
+
+        If no audio file is provided, records a new sample. Requires a trained model.
+
+        Args:
+            audio_file (str, optional): Path to audio file to analyze.
+                If None, records a new sample. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing:
+                - result (str or None): "Human" or "AI" if detection succeeds, None on error.
+                - confidence (float): Confidence score between 0.0 and 1.0.
+        """
         if not self.detector.is_trained:
             print("Error: Model not trained. Please train the model first.")
             return None, 0.0
@@ -66,7 +113,15 @@ class RealTimeVoiceDetector:
         return result, confidence
     
     def continuous_monitoring(self):
-        """Continuous voice monitoring mode"""
+        """
+        Run continuous voice monitoring mode.
+
+        Repeatedly prompts the user to record audio samples and analyzes each one.
+        Continues until interrupted with Ctrl+C.
+
+        Raises:
+            KeyboardInterrupt: When user presses Ctrl+C to stop monitoring.
+        """
         print("Starting continuous monitoring mode...")
         print("Press Ctrl+C to stop")
         
@@ -86,9 +141,21 @@ class RealTimeVoiceDetector:
         except KeyboardInterrupt:
             print("\nStopping continuous monitoring...")
 
-# Quick setup for training with example data
 def quick_train_example():
-    """Training function that automatically finds WAV files from UI recordings"""
+    """
+    Automatically discover and train on voice samples from UI recordings.
+
+    Scans the UI/recordings directory for human and AI voice samples,
+    checks for data quality and balance, then trains a new model.
+    Saves the trained model as 'voice_detector_model.pkl'.
+
+    The function looks for WAV files in:
+        - UI/recordings/human/ for human voice samples
+        - UI/recordings/ai/ for AI-generated voice samples
+
+    Provides warnings if insufficient samples are found or if the dataset
+    is imbalanced.
+    """
     detector = AIVoiceDetector()
     
     print("🔍 Scanning for voice recordings...")
@@ -137,8 +204,18 @@ def quick_train_example():
         print("   4. Record some voice samples")
         print("   5. Come back and run training again")
 
-# Command line interface
 def main():
+    """
+    Run the main command-line interface for the AI Voice Detection System.
+
+    Provides an interactive menu with options to:
+        1. Record and detect voice samples
+        2. Enter continuous monitoring mode
+        3. Train a new model
+        4. Exit the application
+
+    Attempts to load an existing model at startup if available.
+    """
     print("AI Voice Detection System")
     print("=" * 40)
     
